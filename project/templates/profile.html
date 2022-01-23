@@ -4,4 +4,24 @@
 <h1 class="title">
   Welcome, {{ name }}!
 </h1>
+<div class="column is-4 is-offset-4">
+  <div class="box">
+    <b>Passwords:</b>
+    <li>Spotify</li><button>Show password</button>
+    <li>Facebook</li><button>Show password</button>
+    <li>Twitter</li><button>Show password</button>
+  </div>
+    <div class="field">
+      <div class="control">
+          <input class="input is-large" placeholder="URL or Page Name" autofocus="">
+      </div>
+    </div>
+    <div class="field">
+      <div class="control">
+          <input class="input is-large" type="password" name="password" placeholder="Your Password">
+      </div>
+    </div>
+    <button class="button is-block is-info is-large is-fullwidth">+ Add new password</button>
+  </div>
+</div>
 {% endblock %}
