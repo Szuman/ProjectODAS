@@ -6,22 +6,38 @@
 </h1>
 <div class="column is-4 is-offset-4">
   <div class="box">
-    <b>Passwords:</b>
-    <li>Spotify</li><button>Show password</button>
-    <li>Facebook</li><button>Show password</button>
-    <li>Twitter</li><button>Show password</button>
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <div class="notification is-danger">
+        {{ messages[0] }}
+    </div>
+    {% endif %}
+    {% endwith %}
+    <b>Password list:</b>
+    {% if passw_list %}
+    <table class="table">
+      {% for pass in passw_list %}
+      <tr>
+				<td>{{ pass.url }}</td>
+				<td><button>Show password</button></td>
+			</tr>
+      {% endfor %}
+    </table>
+    {% endif %}
   </div>
-    <div class="field">
-      <div class="control">
-          <input class="input is-large" placeholder="URL or Page Name" autofocus="">
+    <form method="POST" action="/profile">
+      <div class="field">
+        <div class="control">
+            <input class="input is-large" type="text" name="url" placeholder="URL or Page Name" autofocus="">
+        </div>
       </div>
-    </div>
-    <div class="field">
-      <div class="control">
-          <input class="input is-large" type="password" name="password" placeholder="Your Password">
+      <div class="field">
+        <div class="control">
+            <input class="input is-large" type="password" name="new_password" placeholder="Your Password">
+        </div>
       </div>
-    </div>
-    <button class="button is-block is-info is-large is-fullwidth">+ Add new password</button>
+      <button class="button is-block is-info is-large is-fullwidth">Add new password</button>
+    </form>
   </div>
 </div>
 {% endblock %}
