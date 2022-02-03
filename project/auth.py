@@ -1,4 +1,5 @@
 from nis import match
+
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 import passlib.hash
 from flask_login import login_user, login_required, logout_user
@@ -10,7 +11,9 @@ from . import db
 import time
 from datetime import datetime
 
-SLEEP_TIME = 1
+SLEEP_TIME = 5
+MAX_ATTEMPTS = 6
+TIMEOUT_PERIOD = 600
 
 auth = Blueprint('auth', __name__)
 
@@ -59,11 +62,12 @@ def login_post():
     if lastlogin:
         timenow = datetime.now()
         diff = timenow - user.lastloginAt
-        if diff.seconds < 600:
+        if diff.seconds < TIMEOUT_PERIOD:
             user.lastloginAt = datetime.now()
             flash('You reached login attempts limit. Please wait 10 min before next attempt')
+            db.session.commit()
             return redirect(url_for('auth.login'))
-        if user.attempts == 6:
+        if user.attempts >= MAX_ATTEMPTS:
             user.attempts = 0
             db.session.commit()
 
@@ -71,9 +75,10 @@ def login_post():
     if not user or not passlib.hash.bcrypt.verify(password, user.password):
         att = user.attempts
         user.attempts = att + 1
-        if user.attempts == 6:
+        if user.attempts == MAX_ATTEMPTS:
             user.lastloginAt = datetime.now()
             flash('You reached login attempts limit. Please wait 10 min before next attempt')
+            db.session.commit()
             return redirect(url_for('auth.login'))
         flash('Please check your login details and try again.')
         db.session.commit()
