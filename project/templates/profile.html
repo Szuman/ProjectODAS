@@ -18,8 +18,11 @@
     <table class="table">
       {% for pass in passw_list %}
       <tr>
-				<td>{{ pass.url }}</td>
-				<td><button>Show password</button></td>
+        <form method="POST" action="/show">
+				<td><p name="url_name">{{ pass.url }}</p></td>
+				<td><a href="{{ url_for('main.verify') }}">Show password</a>
+        </td>
+        </form>>
 			</tr>
       {% endfor %}
     </table>

@@ -1,7 +1,10 @@
-# from Crypto.Cipher import AES
+from crypt import methods
+from Crypto.Cipher import AES
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 from flask_login import login_required, current_user
-from .models import Passwords
+import passlib.hash
+from .models import Passwords, User
+from .encryption import encrypt, decrypt
 from . import db
 import re
 
@@ -18,7 +21,6 @@ def validate_password(password):
     if re.match('^.{,30}$', password):
         return False
     return True
-
 
 @main.route('/')
 def index():
@@ -39,20 +41,61 @@ def profile_post():
     url = request.form.get('url')
     password = request.form.get('new_password')
 
-    # key = b'Sixteen byte key'
-    # data = bytes(password,'utf-8')
+    thepassword = Passwords.query.filter_by(url=url).first()
 
-    # e_cipher = AES.new(key, AES.MODE_EAX)
-    # e_data = e_cipher.encrypt(data) #Encryption
+    if thepassword:
+        flash('This name/url is already on the list. Please choose another one')
+        return redirect(url_for('main.profile'))
 
-    # d_cipher = AES.new(key, AES.MODE_EAX, e_cipher.nonce)
-    # d_data = d_cipher.decrypt(e_data) Original Message
+    user = User.query.filter_by(id=current_user.id).first()
 
-    # passw = d_data.decode("utf-8") 
+    masterp = user.masterpassword
 
-    new_password = Passwords(url = url, password = password, user_id = current_user.id)
+    e_password = encrypt(password, masterp)
+
+    new_password = Passwords(url = url, password = e_password, user_id = current_user.id)
 
     db.session.add(new_password)
     db.session.commit()
     
+    return redirect(url_for('main.profile'))
+
+@main.route('/show', methods=['POST'])
+def show():
+    url_name = request.form.get('url_name')
+    print(url_name)
+    return redirect(url_for('main.display', page=url_name))
+
+@main.route('/verify', methods=['GET','POST'])
+@login_required
+def verify():
+        if request.method == 'POST':
+            if validate_password(request.form.get('master')):
+                flash('Incorrect data')
+                return redirect(url_for('main.profile'))
+            master = request.form.get('master')
+            masterhash = current_user.email + master
+            if not passlib.hash.bcrypt.verify(masterhash, current_user.masterpassword):
+                flash('Wrong Master Password')
+                return redirect(url_for('main.profile'))
+            #isverify = true
+            return redirect(url_for('main.display'))
+        return render_template('masterp.html')
+
+@main.route('/verify', methods=['POST'])
+def verify_post():
+    return redirect(url_for('main.profile'))
+
+@main.route('/display/<page>')
+@login_required
+def display(page):
+    isverified = 0
+    if isverified == 0:
+        return redirect(url_for('main.verify'))
+    thepassword = Passwords.query.filter_by(url=page).first()
+    d_password = decrypt(thepassword.password, current_user.masterpassword) #isverified = false
+    return render_template('password.html', url=thepassword.url, password=d_password)
+
+@main.route('/goback', methods=['POST'])
+def goback_post():
     return redirect(url_for('main.profile'))
