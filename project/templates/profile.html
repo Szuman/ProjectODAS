@@ -6,41 +6,34 @@
 </h1>
 <div class="column is-4 is-offset-4">
   <div class="box">
-    {% with messages = get_flashed_messages() %}
-    {% if messages %}
-    <div class="notification is-danger">
-        {{ messages[0] }}
-    </div>
-    {% endif %}
-    {% endwith %}
-    <b>Password list:</b>
+    <u>Passwords:</u>
     {% if passw_list %}
-    <table class="table">
-      {% for pass in passw_list %}
-      <tr>
-        <form method="POST" action="/show">
-				<td><p name="url_name">{{ pass.url }}</p></td>
-				<td><a href="{{ url_for('main.verify') }}">Show password</a>
-        </td>
-        </form>>
-			</tr>
-      {% endfor %}
-    </table>
+    <ul>
+        {% for pass in passw_list %}
+        <li><b> {{ pass.url }} </b></li>
+        {% endfor %}
+    </ul>
     {% endif %}
   </div>
-    <form method="POST" action="/profile">
-      <div class="field">
-        <div class="control">
-            <input class="input is-large" type="text" name="url" placeholder="URL or Page Name" autofocus="">
-        </div>
+  <form method="POST" action="/show">
+    <div class="field">
+      <div class="control">
+        <button class="button is-block is-info is-large is-fullwidth">Show password</button>
       </div>
-      <div class="field">
-        <div class="control">
-            <input class="input is-large" type="password" name="new_password" placeholder="Your Password">
-        </div>
+    </div>
+  </form>  
+  <br>
+  <form method="POST" action="/add">
+    <div class="field">
+      <div class="control">
+        <button class="button is-block is-info is-large is-fullwidth">Add new password</button>
       </div>
-      <button class="button is-block is-info is-large is-fullwidth">Add new password</button>
-    </form>
-  </div>
+    </div>
+  </form>
+  <br>
+  <div class="box">
+    <p>Last loged: {{ last }}</p>
+    <p>Last failed attempt: {{ failed }}</p>
+  </div>  
 </div>
 {% endblock %}

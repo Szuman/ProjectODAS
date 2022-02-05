@@ -28,4 +28,7 @@ def create_app():
     from .main import main as main_blueprint
     app.register_blueprint(main_blueprint)
 
+    from .register import register as register_blueprint
+    app.register_blueprint(register_blueprint)
+
     return app

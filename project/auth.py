@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 import passlib.hash
-from flask_login import login_user, login_required, logout_user
+from flask_login import login_user, login_required, logout_user, current_user
 import re
 from .models import User
 from . import db
@@ -8,7 +8,7 @@ import time
 from datetime import datetime
 
 SLEEP_TIME = 5
-MAX_ATTEMPTS = 6
+MAX_ATTEMPTS = 5
 TIMEOUT_PERIOD = 600
 
 auth = Blueprint('auth', __name__)
@@ -24,7 +24,6 @@ def validate_password(password):
     if re.match('^.{8,30}$', password):
         return False
     return True
-
 
 @auth.route('/login')
 def login():
@@ -42,19 +41,18 @@ def login_post():
 
     user = User.query.filter_by(email=email).first()
     
-    lastlogin = user.lastloginAt
+    lastlogin = user.lastFailedAttempt
     if lastlogin:
         timenow = datetime.now()
-        diff = timenow - user.lastloginAt
+        diff = timenow - user.lastFailedAttempt
         if diff.seconds < TIMEOUT_PERIOD:
-            user.lastloginAt = datetime.now()
-            flash('You reached login attempts limit. Please wait 10 min before next attempt')
+            user.lastFailedAttempt = datetime.now()
+            flash('You reached your attempts limit. Please wait 10 min before next attempt')
             db.session.commit()
             return redirect(url_for('auth.login'))
         if user.attempts >= MAX_ATTEMPTS:
             user.attempts = 0
             db.session.commit()
-
 
     auth = email + password
 
@@ -62,7 +60,7 @@ def login_post():
         att = user.attempts
         user.attempts = att + 1
         if user.attempts == MAX_ATTEMPTS:
-            user.lastloginAt = datetime.now()
+            user.lastFailedAttempt = datetime.now()
             flash('You reached login attempts limit. Please wait 10 min before next attempt')
             db.session.commit()
             return redirect(url_for('auth.login'))
@@ -71,6 +69,7 @@ def login_post():
         return redirect(url_for('auth.login'))
 
     login_user(user)
+    user.logedNow = datetime.now()
     user.attempts = 0
     db.session.commit()
     return redirect(url_for('main.profile'))
@@ -78,5 +77,9 @@ def login_post():
 @auth.route('/logout')
 @login_required
 def logout():
+    user = User.query.filter_by(email=current_user.email).first()
+    loged = user.logedNow
+    user.lastlogedAt = loged
     logout_user()
-    return redirect(url_for('main.index'))
+    db.session.commit()
+    return redirect(url_for('auth.login'))

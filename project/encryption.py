@@ -20,10 +20,10 @@ def unpad(s):
 def encrypt(plain_text, password):
     # generate a random salt
     salt = os.urandom(AES.block_size)
-    print(type(salt))
+    # print(type(salt))
     # generate a random iv
     iv = Random.new().read(AES.block_size)
-    print(type(iv))
+    # print(type(iv))
 
     # use the Scrypt KDF to get a private key from the password
     private_key = PBKDF2(password, salt, 32, 1000)
@@ -34,7 +34,7 @@ def encrypt(plain_text, password):
     # create cipher config
     cipher_config = AES.new(private_key, AES.MODE_CBC, iv)
     encryption = cipher_config.encrypt(padded_text)
-    print(type(encryption))
+    # print(type(encryption))
 
     cipher_text = bytes.decode(base64.b64encode(encryption))
     salt_str = bytes.decode(base64.b64encode(salt))
@@ -49,18 +49,18 @@ def encrypt(plain_text, password):
 #    }
  
 def decrypt(encr, password):
-    print(type(encr))
-    print(len(encr))
+    # print(type(encr))
+    # print(len(encr))
     # decode the dictionary entries from base64
     ssalt = bytes(encr[:24], 'utf-8')
     salt = base64.b64decode(ssalt)
-    print(len(salt))
+    # print(len(salt))
     siv = bytes(encr[24:48], 'utf-8')
     iv = base64.b64decode(siv)
-    print(len(iv))
+    # print(len(iv))
     senc = bytes(encr[48:], 'utf-8')
     enc = base64.b64decode(senc)
-    print(len(enc))
+    # print(len(enc))
     # generate the private key from the password and salt
     private_key = PBKDF2(password, salt, 32, 1000)
     # create the cipher config
