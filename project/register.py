@@ -5,6 +5,7 @@ from password_strength import PasswordStats
 import re
 from . import db
 from .models import User
+import os
 
 register = Blueprint('register', __name__)
 
@@ -16,7 +17,7 @@ policy = PasswordPolicy.from_names(
 )
 
 def validate_email(email):
-    url_pattern =  '^[a-zA-Z0-9 _\\.@]*$'
+    url_pattern =  '^[a-zA-Z0-9 _\\.@]{1,}$'
     url_regex = re.compile(url_pattern)
     if re.match(url_regex, email):
         return False
@@ -77,8 +78,9 @@ def signup_post():
         flash("Master Password not strong enough. Avoid consecutive characters and easily guessed words.")
         return redirect(url_for('register.signup'))
 
-    auth = passlib.hash.bcrypt.using(rounds=16, salt='1234567890098765432112').hash(email + password)
-    masterpassword = passlib.hash.bcrypt.using(rounds=16, salt='1234567890098765432112').hash(email + master)
+    salt = os.urandom(16)
+    auth = passlib.hash.pbkdf2_sha512.using(rounds=100000, salt=salt).hash(email + password)
+    masterpassword = passlib.hash.pbkdf2_sha512.using(rounds=120000, salt=salt).hash(email + master)
     new_user = User(email=email, name=name, attempts=0, auth=auth, masterpassword=masterpassword)
 
     db.session.add(new_user)

@@ -14,7 +14,7 @@ TIMEOUT_PERIOD = 600
 auth = Blueprint('auth', __name__)
 
 def validate_email(email):
-    url_pattern =  '^[a-zA-Z0-9 _\\.@]*$'
+    url_pattern =  '^[a-zA-Z0-9 _\\.@]{1,}$'
     url_regex = re.compile(url_pattern)
     if re.match(url_regex, email):
         return False
@@ -46,9 +46,7 @@ def login_post():
         timenow = datetime.now()
         diff = timenow - user.lastFailedAttempt
         if diff.seconds < TIMEOUT_PERIOD:
-            user.lastFailedAttempt = datetime.now()
             flash('You reached your attempts limit. Please wait 10 min before next attempt')
-            db.session.commit()
             return redirect(url_for('auth.login'))
         if user.attempts >= MAX_ATTEMPTS:
             user.attempts = 0
@@ -56,7 +54,7 @@ def login_post():
 
     auth = email + password
 
-    if not user or not passlib.hash.bcrypt.verify(auth, user.auth):
+    if not user or not passlib.hash.pbkdf2_sha512.verify(auth, user.auth):
         att = user.attempts
         user.attempts = att + 1
         if user.attempts == MAX_ATTEMPTS:

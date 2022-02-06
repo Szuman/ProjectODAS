@@ -1,5 +1,4 @@
 from crypt import methods
-from Crypto.Cipher import AES
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 from flask_login import login_required, current_user
 import passlib.hash
@@ -16,14 +15,14 @@ MAX_ATTEMPTS = 5
 main = Blueprint('main', __name__)
 
 def validate_url(url):
-    url_pattern =  '^[a-zA-Z0-9 _\\/-:()!.?,]*$'
+    url_pattern =  '^[a-zA-Z0-9 _\\/-:()!.?,]{1,}$'
     url_regex = re.compile(url_pattern)
     if (re.match(url_regex, url)):
         return False
     return True
 
 def validate_password(password):
-    if re.match('^.{,30}$', password):
+    if re.match('^.{1,30}$', password):
         return False
     return True
 
@@ -69,12 +68,12 @@ def addpassword():
 @main.route('/addpassword', methods=["POST"])
 @login_required
 def addpassword_post():
-    if validate_url(request.form.get('url')) or validate_password(request.form.get('new_password')):
+    if validate_url(request.form.get('url')) or validate_password(request.form.get('new_password')) \
+         or validate_masterpassword(request.form.get('masterp')):
         flash('Incorrect data')
         return redirect(url_for('main.addpassword'))
     
     url = request.form.get('url')
-    password = request.form.get('new_password')
 
     thepassword = Passwords.query.filter_by(url=url, user_id=current_user.id).first()
 
@@ -82,10 +81,19 @@ def addpassword_post():
         flash('This name/url is already on the list. Please choose another one')
         return redirect(url_for('main.addpassword'))
 
-    user = User.query.filter_by(id=current_user.id).first()
+    masterp = request.form.get('masterp')
+    result = check_masterpassword(masterp)
 
-    masterhash = user.masterpassword
+    if result == 1:
+        flash('Wrong Master Password')
+        return redirect(url_for('main.addpassword'))
+    elif result == 2:
+        flash('You reached your attempts limit. Please wait 10 min before next attempt')
+        return redirect(url_for('auth.logout'))
 
+    masterhash = masterp + current_user.email
+
+    password = request.form.get('new_password')
     e_password = encrypt(password, masterhash)
 
     new_password = Passwords(url = url, password = e_password, user_id = current_user.id)
@@ -119,37 +127,40 @@ def display_post():
         return redirect(url_for('main.display'))
 
     masterp = request.form.get('masterp')
+    result = check_masterpassword(masterp)
 
-    user = User.query.filter_by(id=current_user.id).first()
-    masterhash = current_user.email + masterp
+    if result == 1:
+        flash('Wrong Master Password')
+        return redirect(url_for('main.display'))
+    elif result == 2:
+        flash('You reached your attempts limit. Please wait 10 min before next attempt')
+        return redirect(url_for('auth.logout'))
 
+    masterhash = masterp + current_user.email
+    thepassword = Passwords.query.filter_by(url=pname, user_id=current_user.id).first()
+    d_password = decrypt(thepassword.password, masterhash)
+    password_str = bytes.decode(d_password)
+    passw_list = Passwords.query.filter_by(user_id = current_user.id).all()
+    return render_template('showpassword.html', passw_list=passw_list, url=pname, thepassword=password_str)
+
+def check_masterpassword(masterp):
     time.sleep(SLEEP_TIME)
-    if not passlib.hash.bcrypt.verify(masterhash, current_user.masterpassword):
+    user = User.query.filter_by(id=current_user.id).first()
+    masterhash = user.email + masterp
+
+    if not passlib.hash.pbkdf2_sha512.verify(masterhash, user.masterpassword):
         att = user.attempts
         user.attempts = att + 1
         if user.attempts == MAX_ATTEMPTS:
             user.lastFailedAttempt = datetime.now()
             db.session.commit()
-            flash('You reached your attempts limit. Please wait 10 min before next attempt')
-            return redirect(url_for('auth.logout'))
-        flash('Wrong Master Password')
+            return 2
         db.session.commit()
-        return redirect(url_for('main.display'))
+        return 1
 
     user.attempts = 0
     db.session.commit()
-    return thepassword_decode(pname)
-
-def thepassword_decode(url):
-    passw_list = Passwords.query.filter_by(user_id = current_user.id).all()
-
-    thepassword = Passwords.query.filter_by(url=url, user_id=current_user.id).first()
-
-    masterp = current_user.masterpassword
-
-    d_password = decrypt(thepassword.password, masterp)
-    password_str = bytes.decode(d_password)
-    return render_template('showpassword.html', passw_list=passw_list, url=url, thepassword=password_str)
+    return 0
 
 @main.route('/goback', methods=['POST'])
 def goback_post():
